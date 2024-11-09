@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, TouchableOpacity } from "react-native";
+import { SplashScreen } from "expo-router";
 import MapView from "react-native-maps";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,6 +8,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SettingsScreen from './settings';
+import { RippleLandmark } from "../../components/RippleLandmark";
+import { ThemedText } from "../../components/ThemedText";
+
+SplashScreen.preventAutoHideAsync();
 
 type RootStackParamList = {
   Home: undefined;
@@ -19,14 +24,28 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 function MapScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const coordinate = {
+    latitude: 37.78225,
+    longitude: -122.4324,
+  };
 
   return (
     <View style={styles.container}>
-      <MapView
+        <ThemedText
+        style={{
+          fontFamily: "ClashDisplay",
+          fontSize: 20,
+          textAlign: "center",
+          marginTop: 60,
+          marginBottom: 10,
+        }}
+      >
+        name of app
+      </ThemedText>
+        <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
+          ...coordinate,
           latitudeDelta: 0.001,
           longitudeDelta: 0.001,
         }}
@@ -34,7 +53,11 @@ function MapScreen() {
         userInterfaceStyle="dark"
         showsBuildings={false}
         zoomEnabled={true}
-      />
+        showsPointsOfInterest={false}
+        showsCompass={false}
+      >
+        <RippleLandmark coordinate={coordinate} groupSize={100} />
+      </MapView>
 
       <TouchableOpacity 
         style={{
@@ -55,6 +78,7 @@ function MapScreen() {
 }
 
 export default function HomeScreen() {
+    
   return (
     <NavigationContainer independent={true}>
       <Stack.Navigator>
@@ -81,4 +105,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
