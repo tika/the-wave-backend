@@ -1,21 +1,48 @@
-import { StyleSheet, View } from "react-native";
-import MapView from "react-native-maps";
+import Mapbox from "@rnmapbox/maps";
+import { SplashScreen } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import { ThemedText } from "../../components/ThemedText";
+
+SplashScreen.preventAutoHideAsync();
+
+Mapbox.setAccessToken("<YOUR_ACCESSTOKEN>");
 
 export default function HomeScreen() {
+  const coordinate = {
+    latitude: 37.78225,
+    longitude: -122.4324,
+  };
+
   return (
     <View style={styles.container}>
-      <MapView
+      <ThemedText
+        style={{
+          fontFamily: "ClashDisplay",
+          fontSize: 20,
+          textAlign: "center",
+          marginTop: 60,
+          marginBottom: 10,
+        }}
+      >
+        name of app
+      </ThemedText>
+      <Text style={{ fontFamily: "ClashDisplay" }}>Group</Text>
+      <Mapbox.MapView style={styles.map} />
+      {/* <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 37.78225,
-          longitude: -122.4324,
+          ...coordinate,
           latitudeDelta: 0.001,
           longitudeDelta: 0.001,
         }}
         userInterfaceStyle="dark"
         showsBuildings={false}
         customMapStyle={mapStyleOptions}
-      />
+        showsPointsOfInterest={false}
+        provider="google"
+      >
+        <RippleLandmark coordinate={coordinate} />
+      </MapView> */}
     </View>
   );
 }
