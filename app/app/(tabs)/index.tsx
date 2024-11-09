@@ -1,44 +1,75 @@
-import { Button, StyleSheet, View } from "react-native";
+import * as React from 'react';
+import { StyleSheet, View, TouchableOpacity } from "react-native";
 import MapView from "react-native-maps";
-import { useRouter } from 'expo-router';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import SettingsScreen from './settings';
 
-export default function HomeScreen() {
-  const router = useRouter();
+type RootStackParamList = {
+  Home: undefined;
+  Settings: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+function MapScreen() {
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <View style={styles.container}>
-        <MapView
-            style={styles.map}
-            initialRegion={{
-                latitude: 37.78825,
-                longitude: -122.4324,
-                latitudeDelta: 0.001,
-                longitudeDelta: 0.001,
-            }}
-            showsUserLocation={true}
-            userInterfaceStyle="dark"
-            showsBuildings={false}
-            customMapStyle={mapStyleOptions}
-            zoomEnabled={true}
-            
-        />
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: 37.78825,
+          longitude: -122.4324,
+          latitudeDelta: 0.001,
+          longitudeDelta: 0.001,
+        }}
+        showsUserLocation={true}
+        userInterfaceStyle="dark"
+        showsBuildings={false}
+        zoomEnabled={true}
+      />
 
-        <View style={{
-            position: 'absolute',
-            top: 50,
-            right: 20,
-        }}>
-            <Ionicons 
-                name="settings-outline" 
-                size={24} 
-                onPress={() => router.navigate('/settings')}
-                color="#fff"  // Using white color since your map is dark themed
-            />
-        </View>
-        
+      <TouchableOpacity 
+        style={{
+          position: 'absolute',
+          top: 50,
+          right: 20,
+        }}
+        onPress={() => navigation.navigate('Settings')}
+      >
+        <Ionicons 
+          name="settings-outline" 
+          size={24} 
+          color="#fff"
+        />
+      </TouchableOpacity>
     </View>
-    
+  );
+}
+
+export default function HomeScreen() {
+  return (
+    <NavigationContainer independent={true}>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Home" 
+          component={MapScreen} 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Settings" 
+          component={SettingsScreen}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
@@ -51,215 +82,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const mapStyleOptions = [
-  {
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#212121",
-      },
-    ],
-  },
-  {
-    elementType: "labels.icon",
-    stylers: [
-      {
-        visibility: "off",
-      },
-    ],
-  },
-  {
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#757575",
-      },
-    ],
-  },
-  {
-    elementType: "labels.text.stroke",
-    stylers: [
-      {
-        color: "#212121",
-      },
-    ],
-  },
-  {
-    featureType: "administrative",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#757575",
-      },
-    ],
-  },
-  {
-    featureType: "administrative.country",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#9e9e9e",
-      },
-    ],
-  },
-  {
-    featureType: "administrative.land_parcel",
-    stylers: [
-      {
-        visibility: "off",
-      },
-    ],
-  },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#bdbdbd",
-      },
-    ],
-  },
-  {
-    featureType: "administrative.neighborhood",
-    stylers: [
-      {
-        visibility: "off",
-      },
-    ],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#757575",
-      },
-    ],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#181818",
-      },
-    ],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#616161",
-      },
-    ],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "labels.text.stroke",
-    stylers: [
-      {
-        color: "#1b1b1b",
-      },
-    ],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry.fill",
-    stylers: [
-      {
-        color: "#2c2c2c",
-      },
-    ],
-  },
-  {
-    featureType: "road",
-    elementType: "labels",
-    stylers: [
-      {
-        visibility: "off",
-      },
-    ],
-  },
-  {
-    featureType: "road",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#8a8a8a",
-      },
-    ],
-  },
-  {
-    featureType: "road.arterial",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#373737",
-      },
-    ],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#3c3c3c",
-      },
-    ],
-  },
-  {
-    featureType: "road.highway.controlled_access",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#4e4e4e",
-      },
-    ],
-  },
-  {
-    featureType: "road.local",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#616161",
-      },
-    ],
-  },
-  {
-    featureType: "transit",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#757575",
-      },
-    ],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [
-      {
-        color: "#000000",
-      },
-    ],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text",
-    stylers: [
-      {
-        visibility: "off",
-      },
-    ],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.fill",
-    stylers: [
-      {
-        color: "#3d3d3d",
-      },
-    ],
-  },
-];
