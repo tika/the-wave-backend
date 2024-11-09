@@ -1,22 +1,44 @@
-import { StyleSheet, View } from "react-native";
+import { Button, StyleSheet, View } from "react-native";
 import MapView from "react-native-maps";
+import { useRouter } from 'expo-router';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 37.78225,
-          longitude: -122.4324,
-          latitudeDelta: 0.001,
-          longitudeDelta: 0.001,
-        }}
-        userInterfaceStyle="dark"
-        showsBuildings={false}
-        customMapStyle={mapStyleOptions}
-      />
+        <MapView
+            style={styles.map}
+            initialRegion={{
+                latitude: 37.78825,
+                longitude: -122.4324,
+                latitudeDelta: 0.001,
+                longitudeDelta: 0.001,
+            }}
+            showsUserLocation={true}
+            userInterfaceStyle="dark"
+            showsBuildings={false}
+            customMapStyle={mapStyleOptions}
+            zoomEnabled={true}
+            
+        />
+
+        <View style={{
+            position: 'absolute',
+            top: 50,
+            right: 20,
+        }}>
+            <Ionicons 
+                name="settings-outline" 
+                size={24} 
+                onPress={() => router.navigate('/settings')}
+                color="#fff"  // Using white color since your map is dark themed
+            />
+        </View>
+        
     </View>
+    
   );
 }
 
