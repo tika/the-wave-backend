@@ -13,7 +13,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View>
       <ThemedText
         style={{
           fontFamily: "ClashDisplay",
@@ -27,7 +27,6 @@ export default function HomeScreen() {
       </ThemedText>
       <Text style={{ fontFamily: "ClashDisplay" }}>Group</Text>
       <MapView
-        style={styles.map}
         initialRegion={{
           ...coordinate,
           latitudeDelta: 0.001,
@@ -39,7 +38,6 @@ export default function HomeScreen() {
         showsCompass={false}
       >
         <RippleLandmark coordinate={coordinate} groupSize={100} />
-        
       </MapView>
     </View>
   );

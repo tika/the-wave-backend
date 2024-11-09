@@ -29,7 +29,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DarkTheme}>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          presentation: "modal",
+          animation: "fade_from_bottom",
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
