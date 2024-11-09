@@ -37,12 +37,6 @@
         }
       ],
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsVersion": "11.0.0"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
