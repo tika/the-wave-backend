@@ -66,13 +66,16 @@ with app.app_context():
 def index():
     return "MongoDB connected!"
 
-def get_nearby_ripples(longitude, latitude, max_distance=5000):
+# MongoDB likes to return coordinates in the format [longitude, latitude]
+# Geopy likes to take latitude, then longitude
+
+def get_nearby_ripples(latitude, longitude, max_distance=5000):
     ripples = list(ripples_collection.find({
         "origin": {
             "$near": {
                 "$geometry": {
                     "type": "Point",
-                    "coordinates": [longitude, latitude]
+                    "coordinates": [latitude, longitude]
                 },
                 "$maxDistance": max_distance  # in meters
             }
@@ -82,6 +85,10 @@ def get_nearby_ripples(longitude, latitude, max_distance=5000):
     # Convert ObjectId to string for each ripple
     for ripple in ripples:
         ripple['_id'] = str(ripple['_id'])
+
+    # Convert coordinates back to latitude, longitude format
+    for ripple in ripples:
+        ripple['origin']['coordinates'] = [ripple['origin']['coordinates'][1], ripple['origin']['coordinates'][0]]
     
     return ripples
 
@@ -96,10 +103,12 @@ def register_presence():
     if not location or not isinstance(location, dict):
         return jsonify({"error": "Location data is required"}), 400
 
-    longitude = float(location.get("longitude"))
-    latitude = float(location.get("latitude"))
+
+    # Intentional hack
+    latitude = location.get("longitude")
+    longitude = location.get("latitude")
  
-    print(longitude, latitude)
+    print(latitude, longitude)
 
     # If longitude or latitude is missing, return an error
     if longitude is None or latitude is None:
@@ -117,7 +126,7 @@ def register_presence():
         # "last_active": datetime.datetime(), # used for invalidation
         "location": {
             "type": "Point",
-            "coordinates": [longitude, latitude]
+            "coordinates": [latitude, longitude]
         }
     }
 
@@ -165,7 +174,7 @@ def register_presence():
             "$near": {
                 "$geometry": {
                     "type": "Point",
-                    "coordinates": [longitude, latitude]
+                    "coordinates": [latitude, longitude]
                 },
                 "$maxDistance": 30  # 30 meters for new ripple
             }
