@@ -67,7 +67,7 @@ def index():
     return "MongoDB connected!"
 
 def get_nearby_ripples(longitude, latitude, max_distance=5000):
-    return list(ripples_collection.find({
+    ripples = list(ripples_collection.find({
         "origin": {
             "$near": {
                 "$geometry": {
@@ -78,6 +78,12 @@ def get_nearby_ripples(longitude, latitude, max_distance=5000):
             }
         }
     }))
+    
+    # Convert ObjectId to string for each ripple
+    for ripple in ripples:
+        ripple['_id'] = str(ripple['_id'])
+    
+    return ripples
 
 @app.route('/api/location', methods=['POST'])
 def register_presence():
