@@ -51,12 +51,12 @@ def init_indexes():
     existing_ripple_indexes = ripples_collection.list_indexes()
     ripple_index_exists = False
     for index in existing_ripple_indexes:
-        if "center_2dsphere" in index["name"]:
+        if "origin_2dsphere" in index["name"]:
             ripple_index_exists = True
             break
 
     if not ripple_index_exists:
-        ripples_collection.create_index([("center", "2dsphere")])
+        ripples_collection.create_index([("origin", "2dsphere")])
 
 # Initialize indexes when app starts
 with app.app_context():
@@ -68,7 +68,7 @@ def index():
 
 def get_nearby_ripples(longitude, latitude, max_distance=5000):
     return list(ripples_collection.find({
-        "center": {
+        "origin": {
             "$near": {
                 "$geometry": {
                     "type": "Point",
@@ -169,14 +169,14 @@ def register_presence():
         avg_lon = sum(user["location"]["coordinates"][0] for user in nearby_users) / len(nearby_users)
         # use time mongodb, not datetime.datetime()
         new_ripple = {
-            "center": {"type": "Point", "coordinates": [avg_lon, avg_lat]},
+            "origin": {"type": "Point", "coordinates": [avg_lon, avg_lat]},
             "members": [user["userID"] for user in nearby_users],
         }
         ripple_id = ripples_collection.insert_one(new_ripple).inserted_id
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": get_nearby_ripples(user_location[0], user_location[1]) }), 200
     
     # As ripples nearby is 5000m, we need to check if the distance is less than 150m
-    ripples_within_150 = list(filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["center"]["coordinates"])).meters <= 150, get_nearby_ripples(user_location[0], user_location[1])))
+    ripples_within_150 = list(filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["origin"]["coordinates"])).meters <= 150, get_nearby_ripples(user_location[0], user_location[1])))
         
     if ripples_within_150 and len(ripples_within_150) > 0:
         print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
@@ -184,7 +184,7 @@ def register_presence():
 
     # Join ripple if within 30 meters
     for ripple in get_nearby_ripples(user_location[0], user_location[1]):
-        distance = geodesic(user_location, tuple(ripple["center"]["coordinates"])).meters
+        distance = geodesic(user_location, tuple(ripple["origin"]["coordinates"])).meters
         if distance <= 30:
             ripples_collection.update_one(
                 {"_id": ripple["_id"]},
