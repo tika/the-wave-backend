@@ -99,6 +99,8 @@ def register_presence():
     longitude = location.get("longitude")
     latitude = location.get("latitude")
  
+    print(longitude, latitude)
+
     # If longitude or latitude is missing, return an error
     if longitude is None or latitude is None:
         return jsonify({"error": "Both longitude and latitude are required"}), 400
