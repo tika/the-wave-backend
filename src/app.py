@@ -138,7 +138,8 @@ def register_presence():
             )
 
             # If there is now less than 3 people in the ripple, dissolve the ripple
-            if len(is_in_ripple["members"]) < 3:
+            updated_ripple = ripples_collection.find_one({"_id": is_in_ripple["_id"]})
+            if updated_ripple and len(updated_ripple["members"]) < 3:
                 ripples_collection.delete_one({"_id": is_in_ripple["_id"]})
 
             return jsonify({"message": "Left ripple", "nearbyRipples": ripples_nearby}), 200
@@ -174,7 +175,7 @@ def register_presence():
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": ripples_nearby}), 200
     
     # As ripples nearby is 5000m, we need to check if the distance is less than 150m
-    ripples_within_150 = filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["center"]["coordinates"])).meters <= 150, ripples_nearby)
+    ripples_within_150 = list(filter(lambda ripple: geodesic(user_location, tuple(ripple["center"]["coordinates"][::-1])).meters <= 150, ripples_nearby))
         
     if ripples_within_150 and len(ripples_within_150) > 0:
         print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
