@@ -114,7 +114,7 @@ def register_presence():
     }
 
     # 2. Find all ripples near me (5km)
-    user_location = (latitude, longitude)
+    user_location = (longitude, latitude)
 
     # If no party mode, return nearby ripples
     if not party_mode:
