@@ -81,7 +81,7 @@ def get_nearby_ripples(latitude, longitude, max_distance=5000):
             }
         }
     }))
-    
+
     # Convert ObjectId to string for each ripple
     for ripple in ripples:
         ripple['_id'] = str(ripple['_id'])
@@ -89,7 +89,7 @@ def get_nearby_ripples(latitude, longitude, max_distance=5000):
     # Convert coordinates back to latitude, longitude format
     for ripple in ripples:
         ripple['origin']['coordinates'] = [ripple['origin']['coordinates'][1], ripple['origin']['coordinates'][0]]
-    
+
     return ripples # Return in latitude, longitude format
 
 @app.route('/api/location', methods=['POST'])
@@ -106,13 +106,13 @@ def register_presence():
 
     latitude = location.get("latitude")
     longitude = location.get("longitude")
- 
+
     print("latitude, longitude: ", latitude, longitude)
 
     # If longitude or latitude is missing, return an error
     if longitude is None or latitude is None:
         return jsonify({"error": "Both longitude and latitude are required"}), 400
-    
+
     try:
         longitude = float(longitude)
         latitude = float(latitude)
@@ -145,7 +145,7 @@ def register_presence():
 
     # Check if I am in a ripple
     is_in_ripple = ripples_collection.find_one({"members": user_id})
-    
+
     if is_in_ripple:
         # Further than 150m away from the origin of the ripple?
         origin_latitude = is_in_ripple["origin"]["coordinates"][1]
@@ -163,7 +163,7 @@ def register_presence():
 
             return jsonify({"message": "Left ripple", "nearbyRipples": get_nearby_ripples(latitude, longitude)}), 200
 
-        return jsonify({"message": "Already in a ripple", "nearbyRipples": get_nearby_ripples(latitude, longitude)}), 200
+        return jsonify({"message": "Already in a ripple","ripple_id": str(is_in_ripple["_id"]),  "nearbyRipples": get_nearby_ripples(latitude, longitude)}), 200
 
 
     # If there are 3 or more users are within 30 meters of eachother and none of them are in a ripple
@@ -192,16 +192,16 @@ def register_presence():
         }
         ripple_id = ripples_collection.insert_one(new_ripple).inserted_id
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": get_nearby_ripples(latitude, longitude) }), 200
-    
+
     # As ripples nearby is 5000m, we need to check if the distance is less than 150m
     ripples_within_150 = list(filter(
         lambda ripple: geodesic(
-            user_location, 
+            user_location,
             (ripple["origin"]["coordinates"][1], ripple["origin"]["coordinates"][0])
-        ).meters <= 150, 
+        ).meters <= 150,
         get_nearby_ripples(latitude, longitude)
     ))
-        
+
     if ripples_within_150 and len(ripples_within_150) > 0:
         print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
         return jsonify({"message": "Ripple nearby within 150m, but not close enough to join", "nearbyRipples": get_nearby_ripples(latitude, longitude) }), 200
@@ -209,7 +209,7 @@ def register_presence():
     # Join ripple if within 30 meters
     for ripple in get_nearby_ripples(latitude, longitude):
         distance = geodesic(
-            user_location, 
+            user_location,
             (ripple["origin"]["coordinates"][1], ripple["origin"]["coordinates"][0])
         ).meters
         if distance <= 30:
