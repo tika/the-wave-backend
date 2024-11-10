@@ -212,7 +212,7 @@ def register_presence():
             user_location,
             (ripple["origin"]["coordinates"][1], ripple["origin"]["coordinates"][0])
         ).meters
-        if distance <= 30:
+        if distance <= 200:
             ripples_collection.update_one(
                 {"_id": ripple["_id"]},
                 {"$addToSet": {"members": user_id}}
