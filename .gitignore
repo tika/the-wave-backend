@@ -1,4 +1,5 @@
 .DS_Store
 
-env*
-.expo*
+.env
+__pycache__
+venv
