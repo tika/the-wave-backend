@@ -45,7 +45,18 @@ def init_indexes():
 
     # Create only if it doesn't exist
     if not index_exists:
-        users_collection.create_index([("location", "2dsphere")])
+        users_collection.create_index([( "location", "2dsphere" )])
+
+    # Add index for ripples collection
+    existing_ripple_indexes = ripples_collection.list_indexes()
+    ripple_index_exists = False
+    for index in existing_ripple_indexes:
+        if "center_2dsphere" in index["name"]:
+            ripple_index_exists = True
+            break
+
+    if not ripple_index_exists:
+        ripples_collection.create_index([("center", "2dsphere")])
 
 # Initialize indexes when app starts
 with app.app_context():
