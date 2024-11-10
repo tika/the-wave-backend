@@ -82,7 +82,7 @@ def register_presence():
     # Update or insert user's presence data
     presence_data = {
         "userID": user_id,
-        "last_active": datetime.datetime(), # used for invalidation
+        # "last_active": datetime.datetime(), # used for invalidation
         "location": {
             "type": "Point",
             "coordinates": [longitude, latitude]
@@ -148,7 +148,6 @@ def register_presence():
                 "$maxDistance": 30  # 30 meters for new ripple
             }
         },
-        "last_active": {"$gte": datetime.datetime() - 600}
     }))
 
     if len(nearby_users) >= 3:
@@ -159,7 +158,6 @@ def register_presence():
         new_ripple = {
             "center": {"type": "Point", "coordinates": [avg_lon, avg_lat]},
             "members": [user["userID"] for user in nearby_users],
-            "timeCreated": datetime.datetime()
         }
         ripple_id = ripples_collection.insert_one(new_ripple).inserted_id
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": ripples_nearby}), 200
