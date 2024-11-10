@@ -122,7 +122,7 @@ def register_presence():
     }
 
     # 2. Find all ripples near me (5km)
-    user_location = (longitude, latitude)
+    user_location = (latitude, longitude)
 
     # If no party mode, return nearby ripples
     if not party_mode:
@@ -140,7 +140,8 @@ def register_presence():
     
     if is_in_ripple:
         # Further than 150m away from the origin of the ripple?
-        distance = geodesic(user_location, tuple(is_in_ripple["origin"]["coordinates"])).meters
+        distance = geodesic(user_location, (is_in_ripple["origin"]["coordinates"][1], 
+                                          is_in_ripple["origin"]["coordinates"][0])).meters
         if distance > 150:
             ripples_collection.update_one(
                 {"_id": is_in_ripple["_id"]},
@@ -184,7 +185,13 @@ def register_presence():
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": get_nearby_ripples(user_location[0], user_location[1]) }), 200
     
     # As ripples nearby is 5000m, we need to check if the distance is less than 150m
-    ripples_within_150 = list(filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["origin"]["coordinates"])).meters <= 150, get_nearby_ripples(user_location[0], user_location[1])))
+    ripples_within_150 = list(filter(
+        lambda ripple: geodesic(
+            user_location, 
+            (ripple["origin"]["coordinates"][1], ripple["origin"]["coordinates"][0])
+        ).meters <= 150, 
+        get_nearby_ripples(user_location[0], user_location[1])
+    ))
         
     if ripples_within_150 and len(ripples_within_150) > 0:
         print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
@@ -192,7 +199,10 @@ def register_presence():
 
     # Join ripple if within 30 meters
     for ripple in get_nearby_ripples(user_location[0], user_location[1]):
-        distance = geodesic(user_location, tuple(ripple["origin"]["coordinates"])).meters
+        distance = geodesic(
+            user_location, 
+            (ripple["origin"]["coordinates"][1], ripple["origin"]["coordinates"][0])
+        ).meters
         if distance <= 30:
             ripples_collection.update_one(
                 {"_id": ripple["_id"]},
