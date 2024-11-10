@@ -7,6 +7,7 @@ from flask import Flask, jsonify, request
 from geopy.distance import geodesic
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,12 +29,14 @@ except Exception as e:
     exit()
 
 # Access your database and collection
-db = client.get_database("userDB")
+db = client.get_database("the-wave-db")
 users_collection = db.users
+ripples_collection = db.ripples
 
 # Create index only once during app initialization
 def init_indexes():
     # Check if index already exists
+    # Use location stuff in mongodb
     existing_indexes = users_collection.list_indexes()
     index_exists = False
     for index in existing_indexes:
@@ -56,83 +59,128 @@ def index():
 @app.route('/api/location', methods=['POST'])
 def register_presence():
     data = request.json
-    user_id = data["userID"]
     location = data.get("location")
-    preference = data.get("preference")
-    emoji = data.get("emoji")
+    user_id = data.get("userID") # Get user id from body of request
+    party_mode = data.get("partyMode") # Party mode = do we create ripples
 
-    print("Received data:", data)
-
-   # Validate location data
+    # If there is no location or the location type is invalid, return an error
     if not location or not isinstance(location, dict):
         return jsonify({"error": "Location data is required"}), 400
 
     longitude = location.get("longitude")
     latitude = location.get("latitude")
-    print("5. coordinates:", longitude, latitude)  # Debug print
-
+ 
+    # If longitude or latitude is missing, return an error
     if longitude is None or latitude is None:
         return jsonify({"error": "Both longitude and latitude are required"}), 400
-
+    
     try:
         longitude = float(longitude)
         latitude = float(latitude)
-
-        if not (-180 <= longitude <= 180 and -90 <= latitude <= 90):
-            return jsonify({
-                "error": "Invalid coordinates. Longitude must be between -180 and 180, Latitude between -90 and 90"
-            }), 400
-
     except (ValueError, TypeError):
         return jsonify({"error": "Coordinates must be valid numbers"}), 400
 
-    # Update or insert the user's presence data
+    # Update or insert user's presence data
     presence_data = {
         "userID": user_id,
-        "last_active": datetime.utcnow(),
-        "preference": preference,
-        "emoji": emoji,
+        "last_active": time.time(), # used for invalidation
         "location": {
             "type": "Point",
             "coordinates": [longitude, latitude]
         }
     }
-    print("Saving presence data:", presence_data)
 
-    result = users_collection.update_one(
+    # 2. Find all ripples near me (5km)
+    user_location = (latitude, longitude)
+    ripples_nearby = list(ripples_collection.find({
+        "center": {
+            "$near": {
+                "$geometry": {
+                    "type": "Point",
+                    "coordinates": [longitude, latitude]
+                },
+                "$maxDistance": 5000  # 5000 meters
+            }
+        }
+    }))
+
+    # If no party mode, return nearby ripples
+    if not party_mode:
+        return jsonify({"nearbyRipples": ripples_nearby}), 200
+
+    # If user is in party mode, update user's presence data
+    users_collection.update_one(
         {"userID": user_id},
         {"$set": presence_data},
         upsert=True
     )
-    print("MongoDB result:", result.modified_count, result.upserted_id)
 
-    # Expect user's current location as query parameters
-    user_lon = longitude
-    user_lat = latitude
-    SEARCH_RADIUS_MILES = 5  # Radius in miles
+    # Check if I am in a ripple
+    is_in_ripple = ripples_collection.find_one({"members": user_id})
+    
+    if is_in_ripple:
+        # Further than 150m away from the origin of the ripple?
+        distance = geodesic(user_location, tuple(is_in_ripple["origin"]["coordinates"])).meters
+        if distance > 150:
+            ripples_collection.update_one(
+                {"_id": is_in_ripple["_id"]},
+                {"$pull": {"members": user_id}}
+            )
+            return jsonify({"message": "Left ripple", "nearbyRipples": ripples_nearby}), 200
 
-    # Convert radius to meters (MongoDB expects distance in meters)
-    radius_in_meters = SEARCH_RADIUS_MILES * 1609.34
+        return jsonify({"message": "Already in a ripple", "nearbyRipples": ripples_nearby}), 200
 
-    # Query for users within the specified radius using MongoDB's geospatial query
-    nearby_users = users_collection.find({
+
+    # If there are 3 or more users are within 30 meters of eachother and none of them are in a ripple
+    # Make a ripple, with the center of the ripple being the average of the users' locations
+    # and add the users to the ripple
+    nearby_users = list(users_collection.find({
         "location": {
             "$near": {
                 "$geometry": {
                     "type": "Point",
-                    "coordinates": [user_lon, user_lat]
+                    "coordinates": [longitude, latitude]
                 },
-                "$maxDistance": radius_in_meters
+                "$maxDistance": 30  # 30 meters for new ripple
             }
         },
-        "last_active": {"$gte": datetime.utcnow() - timedelta(minutes=10)}
-    })
-    print("6. nearby_users:", nearby_users)  # Debug print
+        "last_active": {"$gte": time.time() - 600}
+    }))
 
-    # Prepare a list of nearby users to return
-    loc_list = [{"location": user["location"]["coordinates"]} for user in nearby_users]
+    if len(nearby_users) >= 3:
+        # Calculate center of new ripple
+        avg_lat = sum(user["location"]["coordinates"][1] for user in nearby_users) / len(nearby_users)
+        avg_lon = sum(user["location"]["coordinates"][0] for user in nearby_users) / len(nearby_users)
+        new_ripple = {
+            "center": {"type": "Point", "coordinates": [avg_lon, avg_lat]},
+            "members": [user["userID"] for user in nearby_users],
+            "timeCreated": time.time()
+        }
+        ripple_id = ripples_collection.insert_one(new_ripple).inserted_id
+        return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": ripples_nearby}), 200
 
-    return jsonify(loc_list), 200
+    # Is there a ripple within 150m of me but not close enough to join?
+    
+    # As ripples nearby is 5000m, we need to check if the distance is less than 150m
+    ripples_within_150 = filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["center"]["coordinates"])).meters <= 150, ripples_nearby)
+        
+    if ripples_within_150:
+        print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
+        return jsonify({"message": "Ripple nearby within 150m, but not close enough to join", "nearbyRipples": ripples_nearby}), 200
+
+    # Join ripple if within 30 meters
+    for ripple in ripples_nearby:
+        distance = geodesic(user_location, tuple(ripple["center"]["coordinates"])).meters
+        if distance <= 30:
+            ripples_collection.update_one(
+                {"_id": ripple["_id"]},
+                {"$addToSet": {"members": user_id}}
+            )
+            return jsonify({"message": "Joined ripple", "ripple_id": str(ripple["_id"]), "nearbyRipples": ripples_nearby }), 200
+
+    # If no ripple joined or created
+    return jsonify({"message": "No ripple joined or created", }), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5001)
+
