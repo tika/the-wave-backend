@@ -7,7 +7,6 @@ from flask import Flask, jsonify, request
 from geopy.distance import geodesic
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
-import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -83,7 +82,7 @@ def register_presence():
     # Update or insert user's presence data
     presence_data = {
         "userID": user_id,
-        "last_active": time.time(), # used for invalidation
+        "last_active": datetime.datetime(), # used for invalidation
         "location": {
             "type": "Point",
             "coordinates": [longitude, latitude]
@@ -126,6 +125,11 @@ def register_presence():
                 {"_id": is_in_ripple["_id"]},
                 {"$pull": {"members": user_id}}
             )
+
+            # If there is now less than 3 people in the ripple, dissolve the ripple
+            if len(is_in_ripple["members"]) < 3:
+                ripples_collection.delete_one({"_id": is_in_ripple["_id"]})
+
             return jsonify({"message": "Left ripple", "nearbyRipples": ripples_nearby}), 200
 
         return jsonify({"message": "Already in a ripple", "nearbyRipples": ripples_nearby}), 200
@@ -144,27 +148,26 @@ def register_presence():
                 "$maxDistance": 30  # 30 meters for new ripple
             }
         },
-        "last_active": {"$gte": time.time() - 600}
+        "last_active": {"$gte": datetime.datetime() - 600}
     }))
 
     if len(nearby_users) >= 3:
         # Calculate center of new ripple
         avg_lat = sum(user["location"]["coordinates"][1] for user in nearby_users) / len(nearby_users)
         avg_lon = sum(user["location"]["coordinates"][0] for user in nearby_users) / len(nearby_users)
+        # use time mongodb, not datetime.datetime()
         new_ripple = {
             "center": {"type": "Point", "coordinates": [avg_lon, avg_lat]},
             "members": [user["userID"] for user in nearby_users],
-            "timeCreated": time.time()
+            "timeCreated": datetime.datetime()
         }
         ripple_id = ripples_collection.insert_one(new_ripple).inserted_id
         return jsonify({"message": "New ripple created", "ripple_id": str(ripple_id), "nearbyRipples": ripples_nearby}), 200
-
-    # Is there a ripple within 150m of me but not close enough to join?
     
     # As ripples nearby is 5000m, we need to check if the distance is less than 150m
     ripples_within_150 = filter(lambda ripple: geodesic(user_location, 30 < tuple(ripple["center"]["coordinates"])).meters <= 150, ripples_nearby)
         
-    if ripples_within_150:
+    if ripples_within_150 and len(ripples_within_150) > 0:
         print("NOTIFICATION: Ripple nearby within 150m, but not close enough to join")
         return jsonify({"message": "Ripple nearby within 150m, but not close enough to join", "nearbyRipples": ripples_nearby}), 200
 
@@ -179,7 +182,7 @@ def register_presence():
             return jsonify({"message": "Joined ripple", "ripple_id": str(ripple["_id"]), "nearbyRipples": ripples_nearby }), 200
 
     # If no ripple joined or created
-    return jsonify({"message": "No ripple joined or created", }), 200
+    return jsonify({"message": "No ripple joined or created", "nearbyRipples": ripples_nearby}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5001)
