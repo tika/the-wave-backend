@@ -96,8 +96,8 @@ def register_presence():
     if not location or not isinstance(location, dict):
         return jsonify({"error": "Location data is required"}), 400
 
-    longitude = location.get("longitude")
-    latitude = location.get("latitude")
+    longitude = float(location.get("longitude"))
+    latitude = float(location.get("latitude"))
  
     print(longitude, latitude)
 
